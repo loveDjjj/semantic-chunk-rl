@@ -12,10 +12,12 @@ umask 022
 mkdir -- "$dest"  # Never merge into an old release or a live checkout.
 cd "$root"
 cp --parents -t "$dest" -- LICENSE README.md THIRD_PARTY_NOTICES.md pyproject.toml \
-    docs/methods.md docs/running.md docs/results.md docs/changelog.md datasets/README.md tools/cache_contention_probe.py \
+    docs/methods.md docs/running.md docs/server.md docs/vbench.md docs/results.md docs/changelog.md \
+    docs/experiments/*.md docs/history/*.md datasets/README.md tools/cache_contention_probe.py \
     configs/rl.json configs/rl-whole24.json configs/sft.json configs/sft-selection.json configs/vbench.json configs/cluster.example.json \
     configs/paths.example.json configs/launch.example.json configs/vbench-periodic-prompts.json \
-    scripts/rl.sh scripts/sft.sh scripts/select_sft_prompts.sh scripts/vbench.sh scripts/serve_video_judge.sh
+    scripts/rl.sh scripts/sft.sh scripts/select_sft_prompts.sh scripts/vbench.sh scripts/serve_video_judge.sh \
+    scripts/vbench_score_when_ready.sh
 find src -type f -name '*.py' -exec cp --parents -t "$dest" -- {} +
 inventory=${SCRL_CLUSTER_INVENTORY:-configs/cluster.json}
 topology=${SCRL_CLUSTER_LAYOUT:-configs/cluster.example.json}

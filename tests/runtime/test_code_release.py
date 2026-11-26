@@ -26,7 +26,10 @@ class CodeReleaseTests(unittest.TestCase):
             subprocess.run(command, cwd=tmp, env=env, check=True, capture_output=True)
             self.assertFalse((release/'configs/cluster.json').exists())
             self.assertFalse((release/'.git').exists())
-            for relative in ('docs/changelog.md', 'datasets/README.md', 'tools/cache_contention_probe.py'):
+            for relative in ('docs/running.md', 'docs/server.md', 'docs/vbench.md', 'docs/results.md',
+                             'docs/history/vbench-results-through-20261125.md',
+                             'docs/experiments/20261126-vbench-full-4b-base-vs-sft-longlive-v1.md', 'docs/changelog.md',
+                             'datasets/README.md', 'scripts/vbench_score_when_ready.sh', 'tools/cache_contention_probe.py'):
                 self.assertEqual((release/relative).read_bytes(), (ROOT/relative).read_bytes())
                 self.assertIn('  '+relative+'\n', (release/'SHA256SUMS').read_text())
             public = release/'configs/cluster.runtime.json'
