@@ -75,7 +75,7 @@ def static_filter(run,arm,cfg,tasks,records,binding):
     return value
 
 
-def evaluate(run,arm,dimension,cfg,tasks,records,binding):
+def evaluate(run,arm,dimension,cfg,tasks,records,binding,*,entries=None):
     import torch
     from vbench.utils import init_submodules
     folder=run/'evaluation'/arm
@@ -83,8 +83,9 @@ def evaluate(run,arm,dimension,cfg,tasks,records,binding):
     if static is not None:
         check_receipt(static, receipt_binding(cfg,arm,'static_filter',tasks,records))
         if static['state']!='complete': raise ValueError('Incomplete static filter')
-    entries=build_metric_metadata(json.loads((run/'inputs/metadata.json').read_text()),tasks,
-                                  records,dimension,static)
+    if entries is None:
+        entries=build_metric_metadata(json.loads((run/'inputs/metadata.json').read_text()),tasks,
+                                      records,dimension,static)
     expected={p for entry in entries for p in entry['video_list']}
     aliases=human_action_video_aliases(entries,records,folder/'human_action_videos') if dimension=='human_action' else {}
     info=folder/(dimension+'_full_info.json');atomic_json(info,entries)
