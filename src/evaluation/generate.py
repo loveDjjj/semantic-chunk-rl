@@ -234,9 +234,11 @@ def main(argv=None):
                 if pending_plans:
                     if cfg.get('paired_joint_run'):
                         raise RuntimeError('Missing paired plan; refusing to resample')
-                    subprocess.run([cfg['planner_python'],'-m','scrl.evaluation._planner_lane',
-                                    str(run),arm,str(planned)],input=json.dumps(pending_plans),text=True,
-                                   check=True,timeout=cfg['wall_seconds'])
+                    from scrl.evaluation.planner_pool import plan_concurrently
+                    lanes=int(os.environ.get('SCRL_EVAL_PLANNER_LANES','1'))
+                    status('planning',pending=len(pending_plans),planner_lanes=min(lanes,len(pending_plans)))
+                    plan_concurrently([cfg['planner_python'],'-m','scrl.evaluation._planner_lane',
+                                       str(run),arm,str(planned)],pending_plans,lanes,cfg['wall_seconds'])
             else:
                 from scrl.models.planner import PlannerPolicy
                 policy=PlannerPolicy(assets['planner_model'],assets['planner_adapter'],device='cuda:0',limits=PlanLimits(**cfg['plan']),
