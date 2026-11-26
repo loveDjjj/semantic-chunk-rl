@@ -4,7 +4,7 @@
 
 | 组别 | Planner | Executor | 登记状态 |
 |---|---|---|---|
-| `base` | Qwen3.5-4B，无 Planner adapter | LongLive-1.3B，段内联合去噪，无 RL checkpoint | 分片 9 收尾，1 个计划截断 |
+| `base` | Qwen3.5-4B，无 Planner adapter | LongLive-1.3B，段内联合去噪，无 RL checkpoint | 生成结束，6,219/6,220 |
 | `sft` | 同一 4B + 两轮教师 SFT LoRA | 与 base 相同 | 25 卡已启动 |
 
 SFT adapter 预期 SHA-256：`589376508f48a1116aeab3b2c162f14b1b6e27dff2f0bc720a70d0909db22bd1`。教师数据的训练与内部验证切分合计纳入 600 条官方提示词，不把全量所得差异解读为完全未见提示词上的泛化收益。
@@ -27,7 +27,9 @@ SFT adapter 预期 SHA-256：`589376508f48a1116aeab3b2c162f14b1b6e27dff2f0bc720a
 
 **交接（12:33 UTC 核验）。** 两组的 `inputs/tasks.json`、`inputs/metadata.json` 逐字节一致，评分协议和 LongLive 权重摘要相同。SFT 生成使用 `--shards 26 --task-ids-file "$RUN/inputs/assignment.json"`，槽 9 为空，其他每槽 248 或 249 个任务；一共 6,220 个唯一 ID。两组分别生成 plan；SFT 的 T5 条件只写各节点本地盘。
 
-**Base 缺项。** `b4e6072742fca5e8_04`（`castle`，Planner seed 891304，视频 seed 991304）的单条恢复在原 1,536 token 上限内未结束。9 号按原种子执行其余 238 条。该条阻塞 `background_consistency`、`scene`，不阻塞其余 14 维；不改种子、不替补、不据此发布全量总分。
+**Base 缺项。** `b4e6072742fca5e8_04`（`castle`，Planner seed 891304，视频 seed 991304）的单条恢复在原 1,536 token 上限内未结束。9 号按原种子完成其余 238 条后退出，未再接任务。该条阻塞 `background_consistency`、`scene`，不阻塞其余 14 维；不改种子、不替补、不据此发布全量总分。
+
+**SFT 分片 23。** 前 96 份计划已保存；随后一批出现截断。只在原卡恢复，保留已有计划摘要，使用原始 batch 形状、种子及 token 预算。恢复记录位于 `sft/launch/recover-sft23-b16-rows/`，截断条目不生成占位视频。
 
 | 原分片 | 可配对任务数 / 该分片已采样数（按分片顺序排列） |
 |---|---|
@@ -40,8 +42,8 @@ SFT adapter 预期 SHA-256：`589376508f48a1116aeab3b2c162f14b1b6e27dff2f0bc720a
 | 字段 | base | sft |
 |---|---|---|
 | 运行目录、生成程序 commit | `$C/runs/20261126-vbench-full-4b-base-vs-sft-longlive-v1/base`，首次提交 `376d4f0b52c4e8ccbfc5658933eb361319466bc6` | 同级 `sft/`，`28b5f56` |
-| UTC 开始 / 结束 | 2026-11-26 11:23:07–11:23:14 提交全部 26 个分片；尚未结束 | 2026-11-26 12:32 提交，12:33 已核验 25 个分片运行；尚未结束 |
-| 完成视频数 / 预期；有效维度 / 16 | 待验收 / 6,220；待验收 / 16 | 待核验 |
+| UTC 生成开始 / 结束 | 2026-11-26 11:23:07–11:23:14 提交全部 26 个分片；12:41 分片 9 结束 | 2026-11-26 12:32 提交，12:33 已核验 25 个分片运行；尚未结束 |
+| 已发布视频数 / 预期；有效维度 / 16 | 6,219 / 6,220；待评分 | 待核验 |
 | 报告位置及 SHA-256 | 未生成 | 未生成 |
 | 质量 / 语义 / 总分 | 未测 | 未测 |
 

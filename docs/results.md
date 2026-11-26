@@ -4,7 +4,7 @@
 
 | 实验记录 | 组别 | 评测范围 | 状态 | 质量 / 语义 / 总分（×100） |
 |---|---|---|---|---|
-| [20261126：4B Base 与 SFT + LongLive](experiments/20261126-vbench-full-4b-base-vs-sft-longlive-v1.md) | `base`：4B，无 SFT | 普通 VBench 全量，16 维 | 分片 9 收尾；1 个计划截断，影响 2 维 | 无全量成绩 |
+| [20261126：4B Base 与 SFT + LongLive](experiments/20261126-vbench-full-4b-base-vs-sft-longlive-v1.md) | `base`：4B，无 SFT | 普通 VBench 全量，16 维 | 生成已结束：6,219/6,220；1 个计划截断，影响 2 维 | 无全量成绩 |
 | 同上 | `sft`：4B + 教师 SFT LoRA | 同一任务、种子和协议 | 25 卡已启动，覆盖全部 6,220 个任务 | 未测 |
 
 ## 登记规则
