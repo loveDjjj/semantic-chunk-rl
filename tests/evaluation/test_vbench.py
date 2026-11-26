@@ -31,9 +31,13 @@ class VBenchTests(unittest.TestCase):
         need=required_tasks(tasks,'human_action');complete={t['id'] for t in need}
         self.assertTrue(metric_ready('human_action',tasks,complete))
         self.assertFalse(metric_ready('human_action',tasks,complete-{need[0]['id']}))
-        self.assertTrue(metric_ready('static_filter',tasks,{tasks[0]['id']}))
+        self.assertFalse(metric_ready('static_filter',tasks,{tasks[0]['id']}))
         self.assertFalse(metric_ready('temporal_flickering',tasks,complete))
-        self.assertTrue(metric_ready('temporal_flickering',tasks,complete,static_complete=True))
+        self.assertFalse(metric_ready('temporal_flickering',tasks,complete,static_complete=True))
+        all_static={t['id'] for t in required_tasks(tasks,'static_filter')}
+        self.assertEqual(len(all_static),25)
+        self.assertTrue(metric_ready('static_filter',tasks,all_static))
+        self.assertTrue(metric_ready('temporal_flickering',tasks,all_static,static_complete=True))
 
     def test_two_storage_assignments_are_disjoint_and_keep_original_shards(self):
         tasks=make_tasks(self.inputs()[0]);remote=[t['id'] for i,t in enumerate(tasks) if i%3==0]

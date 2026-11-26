@@ -76,14 +76,14 @@ def validate_subset(prompts,metadata,official):
 
 
 def required_tasks(tasks,dimension):
-    if dimension=='static_filter':return [t for t in tasks if 'temporal_flickering' in t['dimensions']]
+    if dimension in ('static_filter','temporal_flickering'):
+        return [t for t in tasks if 'temporal_flickering' in t['dimensions']]
     return [t for t in tasks if dimension in t['dimensions'] and t['sample_index']<5]
 
 
 def metric_ready(dimension,tasks,completed,static_complete=False):
-    if dimension=='temporal_flickering':return static_complete
+    if dimension=='temporal_flickering' and not static_complete:return False
     required=required_tasks(tasks,dimension)
-    if dimension=='static_filter':return any(t['id'] in completed for t in required)
     return bool(required) and all(t['id'] in completed for t in required)
 
 

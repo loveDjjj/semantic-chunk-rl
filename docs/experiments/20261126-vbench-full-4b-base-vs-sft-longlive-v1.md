@@ -4,8 +4,8 @@
 
 | 组别 | Planner | Executor | 登记状态 |
 |---|---|---|---|
-| `base` | Qwen3.5-4B，无 Planner adapter | LongLive-1.3B，段内联合去噪，无 RL checkpoint | 26 个生成分片已启动 |
-| `sft` | 同一 4B + 两轮教师 SFT LoRA | 与 base 相同 | 后执行，未启动 |
+| `base` | Qwen3.5-4B，无 Planner adapter | LongLive-1.3B，段内联合去噪，无 RL checkpoint | 分片 9 收尾，1 个计划截断 |
+| `sft` | 同一 4B + 两轮教师 SFT LoRA | 与 base 相同 | 25 卡已启动 |
 
 SFT adapter 预期 SHA-256：`589376508f48a1116aeab3b2c162f14b1b6e27dff2f0bc720a70d0909db22bd1`。教师数据的训练与内部验证切分合计纳入 600 条官方提示词，不把全量所得差异解读为完全未见提示词上的泛化收益。
 
@@ -15,7 +15,7 @@ SFT adapter 预期 SHA-256：`589376508f48a1116aeab3b2c162f14b1b6e27dff2f0bc720a
 
 - 使用[普通 VBench 配方](../../configs/vbench.json)和官方完整元数据，不传提示词子集，不使用 VBench-Long；执行时核对两组 `inputs/tasks.json`、`inputs/metadata.json` 摘要及视频重复数。两组共用每题的 Planner seed 和视频 seed，但**各自生成 plan**；共享 plan 会抹掉待比较的 SFT 效应。
 - 两组使用相同视频骨干、生成预算、16 fps、维度归一化规则和评估权重。报告分数为官方聚合值 ×100（7 个质量维度、9 个语义维度，质量:语义 = 4:1），不使用 RL 的 50:50 奖励。建议同时报告帧数或时长分布，避免把更长的视频直接解释成更好的分段。
-- 顺序执行，两组不同时抢卡。`base` 先用 26 张卡：清单节点 0、1、2、3、4、6 各用物理卡 0–3，节点 5 只用物理卡 2、3。`sft` 未启动；另行授权后才复用同一布局和任务；26 卡不是 24 卡 RL 的角色划分。
+- Base 先用 26 张卡：清单节点 0、1、2、3、4、6 各用物理卡 0–3，节点 5 只用物理卡 2、3。SFT 接手已释放的 25 张卡，包括已完成 239/239 的 20 号；9 号（节点 2 物理卡 1）只做 Base 收尾。25 张卡重新均分 SFT 全量任务，不丢弃原 9 号关联的提示词。
 
 ## 执行记录
 
@@ -23,7 +23,11 @@ SFT adapter 预期 SHA-256：`589376508f48a1116aeab3b2c162f14b1b6e27dff2f0bc720a
 
 **已执行的过渡恢复，仅针对 base。** 在原 26 个分片内，当时每卡以两个 Planner 子进程分担尚无 sampled 结果的任务；这不是单模型多提示词推理，也不是后续默认。过渡恢复不改 planner seed、video seed 或计划归属。T5 微批保持 8。生成计划采用 `--video-batch-size 2`，只对同分片且完整有序 `num_chunks` 序列相同的两个任务合批，排不成对时单条；CUDA OOM 回退到逐视频执行，不能跳样本或改变 seed。按暂停快照计算，已有样本中可双条处理 2,988/3,363（88.8%，1,494 对），其余 375 条单独生成。这是可配对性，不代表已经上线或达到某个加速比；执行时保留每视频实际 batch、回退记录，后续 SFT 比较须披露执行方式。
 
-**实际执行与后续默认。** base 的单实例 Planner 阶段使用 batch 8，分片 9 以 batch 1 恢复，既有 sampled 计划不重抽。下一组 SFT 评测按后续 VBench 默认：每卡一个 Planner 实例、一次前向最多 16 个提示词，每行保持独立 RNG、约束语法和 EOS。该组未启动，不把 16 写成 base 实测。两组对照时须披露批量差异；T5 仍为 8，LongLive 仍为 2，RL 不变。
+**实际批量。** Base 的单实例 Planner 阶段使用 batch 8，分片 9 以 batch 1 恢复，既有 sampled 计划不重抽。SFT 每卡一个 Planner，一次前向最多 16 个提示词，每行保持独立 RNG、约束语法和 EOS；25 个分片均已产出批量为 16 的计划。T5 均为 8，LongLive 均为 2。比较成绩时保留两组 Planner 批量差异，不声称不同批量逐位一致。
+
+**交接（12:33 UTC 核验）。** 两组的 `inputs/tasks.json`、`inputs/metadata.json` 逐字节一致，评分协议和 LongLive 权重摘要相同。SFT 生成使用 `--shards 26 --task-ids-file "$RUN/inputs/assignment.json"`，槽 9 为空，其他每槽 248 或 249 个任务；一共 6,220 个唯一 ID。两组分别生成 plan；SFT 的 T5 条件只写各节点本地盘。
+
+**Base 缺项。** `b4e6072742fca5e8_04`（`castle`，Planner seed 891304，视频 seed 991304）的单条恢复在原 1,536 token 上限内未结束。9 号按原种子执行其余 238 条。该条阻塞 `background_consistency`、`scene`，不阻塞其余 14 维；不改种子、不替补、不据此发布全量总分。
 
 | 原分片 | 可配对任务数 / 该分片已采样数（按分片顺序排列） |
 |---|---|
@@ -35,8 +39,8 @@ SFT adapter 预期 SHA-256：`589376508f48a1116aeab3b2c162f14b1b6e27dff2f0bc720a
 
 | 字段 | base | sft |
 |---|---|---|
-| 运行目录、生成程序 commit | `$C/runs/20261126-vbench-full-4b-base-vs-sft-longlive-v1/base`，`376d4f0b52c4e8ccbfc5658933eb361319466bc6` | 未启动 |
-| UTC 开始 / 结束 | 2026-11-26 11:23:07–11:23:14 提交全部 26 个分片（`launch/generate-*.pid` 文件时间）；尚未结束 | 未启动 |
+| 运行目录、生成程序 commit | `$C/runs/20261126-vbench-full-4b-base-vs-sft-longlive-v1/base`，首次提交 `376d4f0b52c4e8ccbfc5658933eb361319466bc6` | 同级 `sft/`，`28b5f56` |
+| UTC 开始 / 结束 | 2026-11-26 11:23:07–11:23:14 提交全部 26 个分片；尚未结束 | 2026-11-26 12:32 提交，12:33 已核验 25 个分片运行；尚未结束 |
 | 完成视频数 / 预期；有效维度 / 16 | 待验收 / 6,220；待验收 / 16 | 待核验 |
 | 报告位置及 SHA-256 | 未生成 | 未生成 |
 | 质量 / 语义 / 总分 | 未测 | 未测 |

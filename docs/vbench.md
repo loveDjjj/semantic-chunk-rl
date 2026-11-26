@@ -1,6 +1,6 @@
 # 普通 VBench 全量评测
 
-本页维护操作步骤。每个具体实验用同一个 UTC 实验 ID 关联 `docs/experiments/<ID>.md`、`$C/runs/<ID>/<ARM>/` 和[结果总表](results.md)。[本次实验](experiments/20261126-vbench-full-4b-base-vs-sft-longlive-v1.md)先用全部 26 卡做 `base`，不分成 13/13 两组，更不是 RL 的 14/8/2。**本次不得自动衔接或手工启动 SFT 组**；以下生成命令只用于新作业首次提交，不能在已经启动的分片上重复执行。
+本页维护操作步骤。用同一个 UTC 实验 ID 关联 `docs/experiments/<ID>.md`、`$C/runs/<ID>/<ARM>/` 和[结果总表](results.md)。同一物理卡上，上一组的生成进程退出后才交接给下一组。实际分片、批量和启动时间以[实验记录](experiments/20261126-vbench-full-4b-base-vs-sft-longlive-v1.md)为准；不要重复提交正在运行的分片。
 
 ## 准备一次
 
@@ -24,7 +24,7 @@ sh scripts/vbench.sh prepare --run "$RUN" --arm "$ARM" \
     --text-batch-size 8 --video-batch-size 2 --planner-python "$D/runtime/planner-joint-v1/bin/python"
 ```
 
-核对 `config.json` 的 arm 为 `pre_sft`、无 RL checkpoint，`generation_identity.text_batch_size` 为 8。若以后另行授权 SFT，必须用新的 arm 目录、`--planner-variant sft` 和同一个 base executor，核对 tasks、元数据、种子及评分协议一致，但不要复用裸 4B 的 plan。
+裸 4B 应为 `pre_sft`，无 RL checkpoint，`generation_identity.text_batch_size` 为 8。SFT 使用独立运行目录、`--planner-variant sft` 和同一个 base executor。核对两组 tasks、元数据、种子及评分协议一致，不复用裸 4B 的 plan。
 
 ## 26 卡生成
 
@@ -50,17 +50,17 @@ CUDA_VISIBLE_DEVICES="$GPU" sh scripts/vbench.sh generate \
 
 26 个生成进程并非分别固定充当 Planner/T5/Executor：每卡只加载一个 Planner 实例，每次解码前向批量处理最多 16 个提示词，各行独立使用任务 seed 的随机流、自己的语法约束与 EOS 终止状态，完成行不再参加采样。之后 T5 对不同 caption 微批（8），LongLive 则只将同一分片内完整有序段长序列相同的任务两两合批（视频 batch 2）。三者独立，不能用同卡多个模型实例代替 Planner 的真正 batch。每个分片另用一个后台线程编码 MP4，最多两个未收尾任务；`records/<ARM>/*.json` 在成片和 SHA 写好后才发布。看 `workers/<ARM>/generate-*/status.json` 区分加载、编码、生成及失败，不能把多个 PID 当成重复占卡或把计划数当作视频数。
 
-## 评分一次
+非连续分片：为完整任务清单生成互不重叠的 ID 分组，保留空槽，各 worker 加 `--task-ids-file "$RUN/inputs/assignment.json"`；`--shards` 仍为清单的总槽数。排除一张卡不等于排除它原来的提示词。断点恢复沿用原分配文件、原两类 seed 和既有计划，不重建 prepare 目录或静默重抽。
 
-**暂停后的 base 恢复。** 先核对旧分片与旧评分进程均已退出，再核对 `workers/base/generate-*/sampled/` 与 `inputs/tasks.json`。仅补缺项、不重抽已有 plan、不重建 prepare 目录；按原分片、原两类任务 seed 调度。实验记录中每卡两个 Planner 进程是一次过渡措施，不要复制到新作业或写进启动模板。本次 base 单实例阶段使用 batch 8，分片 9 以 batch 1 恢复；不重抽已有计划。后续 VBench（包括待授权的 SFT 组）默认单实例 batch 16，不改 RL 候选数。视频合批要保留每个任务自己的 seed 和条件，只合并完整有序段长序列一致的两项；单项或双条 CUDA OOM 时按单条生成，不更改任务身份。未经新版实现和同环境数值验收，不把批次变化称为逐位等价。待 STOP 已按恢复流程解除、分片已重新托管后才恢复唯一评分监控；不要启动 SFT。
+## 评分
 
-在选定评分节点只提交一个评分监控（已有则不重复）。它先在 CPU 上等 26 个分片成功且 6,220 条视频记录齐全，再在指定 GPU 执行完整评分，不占用单独 13 张评分卡。生成期间不要清理本地缓存或共享的视频记录。
+每组只提交一个监控。将已退出生成的卡显式交给评分，一张卡同一时间执行一个维度。`--incremental` 会先处理所有所需视频均已发布的维度。静态过滤先于闪烁评分。对于已知缺样、只需处理当前就绪维度的组，可加 `--yield-when-idle`；部分维度不是完整总分。生成期间不要清理本地缓存或共享的视频。
 
 ```bash
 : "${SCORE_GPU:?已分配的评分物理卡号}"
 export SCRL_VBENCH_PYTHON="$D/runtime/vbench-v1/bin/python"
 CUDA_VISIBLE_DEVICES="$SCORE_GPU" sh scripts/vbench_score_when_ready.sh \
-    "$RUN" --arm "$ARM" --shards 26 --expected-tasks 6220
+    "$RUN" --arm "$ARM" --shards 26 --expected-tasks 6220 --incremental
 ```
 
-看 `evaluation/<ARM>/watch-status.json` 和 `score.log`。若分片失败，先调查该分片再恢复，不能发布部分结果；已有监控时不要删锁重开。成功报告是 `evaluation/<ARM>/summary.json`：核验 16 维覆盖、质量/语义/总分、协议及报告摘要后回填对应实验页和总表。该流程不启动下一组。
+非连续 worker 用 `--shards <活跃数量> --shard-indices <逗号分隔的实际编号>`。看 `evaluation/<ARM>/watch-status.json` 和逐维日志；已有监控时不要删锁重开。只有全量视频和 16 维都核验通过，才发布 `evaluation/<ARM>/summary.json` 并回填质量、语义和总分。
