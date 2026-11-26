@@ -11,8 +11,18 @@ from scrl.models.planner import PlannerPolicy
 from scrl.evaluation.io import atomic_json
 
 
+def planner_batch_size():
+    size=int(os.environ.get('SCRL_EVAL_PLANNER_BATCH_SIZE','16'))
+    if size not in (1,4,8,16):
+        raise ValueError('SCRL_EVAL_PLANNER_BATCH_SIZE must be 1, 4, 8, or 16')
+    if size>1 and int(os.environ.get('SCRL_EVAL_PLANNER_LANES','1'))!=1:
+        raise ValueError('Use one Qwen model process per GPU for batched planning')
+    return size
+
+
 def main():
     import torch
+    batch_size=planner_batch_size()
     run, arm, folder = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3])
     cfg = read(run / "config.json")
     assets, arm_cfg = cfg["assets"], cfg["arms"][arm]
@@ -26,11 +36,6 @@ def main():
                              map_location="cpu", weights_only=True, mmap=True)
         load_adapter(planner.model, payload["planner"])
     tasks=json.load(sys.stdin)
-    batch_size=int(os.environ.get('SCRL_EVAL_PLANNER_BATCH_SIZE','8'))
-    if batch_size not in (1,4,8,16):
-        raise ValueError('SCRL_EVAL_PLANNER_BATCH_SIZE must be 1, 4, 8, or 16')
-    if batch_size>1 and int(os.environ.get('SCRL_EVAL_PLANNER_LANES','1'))!=1:
-        raise ValueError('Use one Qwen model process per GPU for batched planning')
     print(f'planner_tasks={len(tasks)} planner_batch_size={batch_size}',flush=True)
     for start in range(0,len(tasks),batch_size):
         if (run / "STOP").exists() or (run / ("STOP-" + arm)).exists():

@@ -40,7 +40,7 @@ sh scripts/vbench.sh prepare --run "$RUN" --arm "$ARM" \
 
 ```bash
 : "${GPU:?本机物理卡号}" "${SHARD:?全局分片号}"
-export SCRL_EVAL_PLANNER_BATCH_SIZE=8  # 单模型多提示词；设为 1 仅供调试
+export SCRL_EVAL_PLANNER_BATCH_SIZE=16  # 单模型多提示词；设为 1 仅供调试
 export SCRL_EVAL_CONDITIONS="/var/tmp/semantic-chunk-vbench/$ID/conditions"
 mkdir -p "$SCRL_EVAL_CONDITIONS"
 df -h "$SCRL_EVAL_CONDITIONS"
@@ -48,11 +48,11 @@ CUDA_VISIBLE_DEVICES="$GPU" sh scripts/vbench.sh generate \
     --run "$RUN" --arm "$ARM" --shard "$SHARD" --shards 26
 ```
 
-26 个生成进程并非分别固定充当 Planner/T5/Executor：每卡只加载一个 Planner 实例，每次解码前向批量处理最多 8 个提示词，各行独立使用任务 seed 的随机流、自己的语法约束与 EOS 终止状态，完成行不再参加采样。之后 T5 对不同 caption 微批（8），LongLive 则只将同一分片内完整有序段长序列相同的任务两两合批（视频 batch 2）。三者独立，不能用同卡多个模型实例代替 Planner 的真正 batch。每个分片另用一个后台线程编码 MP4，最多两个未收尾任务；`records/<ARM>/*.json` 在成片和 SHA 写好后才发布。看 `workers/<ARM>/generate-*/status.json` 区分加载、编码、生成及失败，不能把多个 PID 当成重复占卡或把计划数当作视频数。
+26 个生成进程并非分别固定充当 Planner/T5/Executor：每卡只加载一个 Planner 实例，每次解码前向批量处理最多 16 个提示词，各行独立使用任务 seed 的随机流、自己的语法约束与 EOS 终止状态，完成行不再参加采样。之后 T5 对不同 caption 微批（8），LongLive 则只将同一分片内完整有序段长序列相同的任务两两合批（视频 batch 2）。三者独立，不能用同卡多个模型实例代替 Planner 的真正 batch。每个分片另用一个后台线程编码 MP4，最多两个未收尾任务；`records/<ARM>/*.json` 在成片和 SHA 写好后才发布。看 `workers/<ARM>/generate-*/status.json` 区分加载、编码、生成及失败，不能把多个 PID 当成重复占卡或把计划数当作视频数。
 
 ## 评分一次
 
-**暂停后的 base 恢复。** 先核对旧分片与旧评分进程均已退出，再核对 `workers/base/generate-*/sampled/` 与 `inputs/tasks.json`。仅补缺项、不重抽已有 plan、不重建 prepare 目录；按原分片、原两类任务 seed 调度。实验记录中每卡两个 Planner 进程是一次过渡措施，不要复制到新作业或写进启动模板。默认单实例 batch 8，也不改为 RL 每组 8 个候选。视频合批要保留每个任务自己的 seed 和条件，只合并完整有序段长序列一致的两项；单项或双条 CUDA OOM 时按单条生成，不更改任务身份。未经新版实现和同环境数值验收，不把批次变化称为逐位等价。待 STOP 已按恢复流程解除、分片已重新托管后才恢复唯一评分监控；不要启动 SFT。
+**暂停后的 base 恢复。** 先核对旧分片与旧评分进程均已退出，再核对 `workers/base/generate-*/sampled/` 与 `inputs/tasks.json`。仅补缺项、不重抽已有 plan、不重建 prepare 目录；按原分片、原两类任务 seed 调度。实验记录中每卡两个 Planner 进程是一次过渡措施，不要复制到新作业或写进启动模板。本次 base 单实例阶段使用 batch 8，分片 9 以 batch 1 恢复；不重抽已有计划。后续 VBench（包括待授权的 SFT 组）默认单实例 batch 16，不改 RL 候选数。视频合批要保留每个任务自己的 seed 和条件，只合并完整有序段长序列一致的两项；单项或双条 CUDA OOM 时按单条生成，不更改任务身份。未经新版实现和同环境数值验收，不把批次变化称为逐位等价。待 STOP 已按恢复流程解除、分片已重新托管后才恢复唯一评分监控；不要启动 SFT。
 
 在选定评分节点只提交一个评分监控（已有则不重复）。它先在 CPU 上等 26 个分片成功且 6,220 条视频记录齐全，再在指定 GPU 执行完整评分，不占用单独 13 张评分卡。生成期间不要清理本地缓存或共享的视频记录。
 

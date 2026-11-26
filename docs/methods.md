@@ -36,7 +36,7 @@
 
 ## 独立评估
 
-训练奖励不是 VBench 分数。项目的[评估配方](../configs/vbench.json)固定 Planner 和视频的种子；本地 Planner 按约束随机采样（`do_sample=True`、温度 1、`top_p=1`），不是贪心解码。做去噪方式的成对对照时应复用同一份 plan 和相同视频 seed。固定种子不保证不同软件、硬件或外部 API 逐位重现。评测推理默认每卡单个 Planner 实例，一次前向处理最多 8 个提示词（`SCRL_EVAL_PLANNER_BATCH_SIZE=1` 用于调试）。每行的随机数按自己的任务种子推进，使用自己的语法状态、可选 token 和 EOS；不同提示词不因此共享计划或相互竞争。T5 文本 batch 8 和 LongLive 视频 batch 2 是独立的后续优化；后一项仅对完整段长序列相同的任务配对。这里的 batch 是推理调度，不改变联合 RL 的候选数、采样协议或优势分组。当前教师 SFT + 4B 整计划联合 RL 没有可报告的 VBench 实测点；[历史结果](history/vbench-results-through-20261125.md)不能替代它。
+训练奖励不是 VBench 分数。项目的[评估配方](../configs/vbench.json)固定 Planner 和视频的种子；本地 Planner 按约束随机采样（`do_sample=True`、温度 1、`top_p=1`），不是贪心解码。做去噪方式的成对对照时应复用同一份 plan 和相同视频 seed。固定种子不保证不同软件、硬件或外部 API 逐位重现。评测推理默认每卡单个 Planner 实例，一次前向处理最多 16 个提示词（`SCRL_EVAL_PLANNER_BATCH_SIZE=1` 用于调试）。每行的随机数按自己的任务种子推进，使用自己的语法状态、可选 token 和 EOS；不同提示词不因此共享计划或相互竞争。T5 文本 batch 8 和 LongLive 视频 batch 2 是独立的后续优化；后一项仅对完整段长序列相同的任务配对。这里的 batch 是推理调度，不改变联合 RL 的候选数、采样协议或优势分组。当前教师 SFT + 4B 整计划联合 RL 没有可报告的 VBench 实测点；[历史结果](history/vbench-results-through-20261125.md)不能替代它。
 
 ## 历史对照：四格配方
 

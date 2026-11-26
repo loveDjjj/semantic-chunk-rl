@@ -4,6 +4,8 @@
 
 ## 2026-11-26
 
+- **后续 VBench Planner 单实例 batch 改为 16。** 下一组 SFT 评测也用 16，尚未启动。已运行的 base 单实例阶段使用 8，分片 9 用 1 恢复；保留该差异，不把历史登记改写成 16。T5 文本微批保持 8，LongLive 视频批量保持 2，RL 配方不变。
+
 - **VBench Planner 默认单实例多提示词。** 新模板每卡一份 Planner 权重，每次解码前向最多处理 8 个提示词，任务各自维护随机数、语法和 EOS；`SCRL_EVAL_PLANNER_BATCH_SIZE=1` 仅用于串行调试。双进程是当日裸 4B 续跑的过渡记录，不作为后续默认或单实例吞吐证据。LongLive 配对视频 batch 2 与 Planner、T5 的 batch 分开；不改变 RL 的采样或优势分组。
 
 - **裸 4B 全量评测暂停后续跑。** 11:33:42 UTC 停止旧生成和评分，保留原分片已落盘的 3,363 份 sampled plan；当时成片、视频记录和正式 T5 plan 均为 0。恢复先以每卡两个独立 Planner 进程补同一分片的缺项，任务归属和 seed 不变。生成阶段目标 batch 2，仅在完整段长序列相同的任务间配对，显存不足退回单条；已有 sampled 中可配对 2,988 条，不是实测吞吐。SFT 未启动，详见[实验记录](experiments/20261126-vbench-full-4b-base-vs-sft-longlive-v1.md)。

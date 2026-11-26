@@ -1,12 +1,20 @@
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import torch
 
 from scrl.models.planner import SeededBatchGrammar
+from scrl.evaluation._planner_lane import planner_batch_size
 
 
 class TestSeededBatchGrammar(unittest.TestCase):
+    def test_eval_defaults_to_sixteen_rows_per_model(self):
+        with patch.dict('os.environ', {}, clear=True):
+            self.assertEqual(planner_batch_size(),16)
+        with patch.dict('os.environ', {'SCRL_EVAL_PLANNER_BATCH_SIZE':'1'}, clear=True):
+            self.assertEqual(planner_batch_size(),1)
+
     class Grammar:
         def __init__(self):
             self.device_support={}
