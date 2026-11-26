@@ -84,7 +84,7 @@ def main(argv=None):
             time.sleep(min(30, max(0, deadline - time.monotonic())))
         status('scoring')
         weights = Path(cfg['vbench_weights'])
-        env = dict(os.environ, PYTHONPATH=os.pathsep.join([cfg['vbench_source'], os.environ['PYTHONPATH']]),
+        env = dict(os.environ, PYTHONPATH=os.pathsep.join(filter(None, (cfg['vbench_source'], os.environ.get('PYTHONPATH')))),
                    VBENCH_CACHE_DIR=str(weights), VBENCH_BERT_PATH=str(weights / 'bert-base-uncased'),
                    TORCH_HOME=str(weights / 'torch_hub'), HF_HUB_OFFLINE='1', TRANSFORMERS_OFFLINE='1')
         candidate = folder / f'.summary-{os.getpid()}.json'
