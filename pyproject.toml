@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "semantic-chunk-rl"
+version = "0.1.0"
+description = "Semantic planning of variable joint-denoising chunks for autoregressive video RL"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["torch>=2.5,<3"]
+
+[project.optional-dependencies]
+selection = ["numpy>=1.24", "scipy>=1.10"]
+# The existing models extra is for the Executor/Judge stack, not the Qwen3.5 planner.
+models = ["transformers==4.57.6", "peft>=0.15", "safetensors>=0.4", "omegaconf>=2.3", "imageio-ffmpeg>=0.5", "Pillow>=10", "decord>=0.6"]
+planner = ["transformers==5.18.0", "peft==0.21.0", "safetensors>=0.4"]
+dev = ["pytest>=8", "ruff>=0.9"]
+verl = ["verl==0.5.0", "ray==2.49.0", "tensordict==0.9.1", "torchdata==0.11.0", "hydra-core==1.3.2", "codetiming>=1.4"]
+
+[project.scripts]
+scrl = "scrl.cli:main"
+
+[tool.setuptools]
+# Explicit root modules keep the source-checkout bridge out of the installed package.
+package-dir = {scrl = "src"}
+py-modules = ["scrl.__main__", "scrl.cli", "scrl.config", "scrl.plan", "scrl.eventlog", "scrl.telemetry"]
+packages = [
+    "scrl.sft", "scrl.rl", "scrl.evaluation", "scrl.runtime",
+    "scrl.models", "scrl.models.scoring",
+]
+
+[tool.setuptools.data-files]
+"share/scrl/scripts" = ["scripts/serve_video_judge.sh"]
+"share/scrl/configs" = ["configs/sft.json", "configs/sft-selection.json", "configs/rl.json", "configs/rl-whole24.json", "configs/vbench.json", "configs/vbench-periodic-prompts.json", "configs/paths.example.json", "configs/cluster.example.json", "configs/launch.example.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

@@ -1,0 +1,898 @@
+[
+  {
+    "index": 3,
+    "id": "0fe841c24e3ae60f",
+    "prompt": "A tranquil tableau of alley",
+    "dimensions": [
+      "temporal_flickering"
+    ],
+    "seed_count": 25
+  },
+  {
+    "index": 9,
+    "id": "3eee3db52e617b9b",
+    "prompt": "In a still frame, courtyard",
+    "dimensions": [
+      "temporal_flickering"
+    ],
+    "seed_count": 25
+  },
+  {
+    "index": 12,
+    "id": "6f411bcff6929b95",
+    "prompt": "indoor gymnasium, frozen in time",
+    "dimensions": [
+      "temporal_flickering"
+    ],
+    "seed_count": 25
+  },
+  {
+    "index": 30,
+    "id": "f8d60d6145bf1366",
+    "prompt": "A tranquil tableau of a beautiful, handcrafted ceramic bowl",
+    "dimensions": [
+      "temporal_flickering"
+    ],
+    "seed_count": 25
+  },
+  {
+    "index": 46,
+    "id": "fea01b00952ae733",
+    "prompt": "A tranquil tableau of the Stonehenge presented itself as an enigmatic puzzle, each colossal stone meticulously placed against the backdrop of tranquility",
+    "dimensions": [
+      "temporal_flickering"
+    ],
+    "seed_count": 25
+  },
+  {
+    "index": 47,
+    "id": "44e536b1ead96914",
+    "prompt": "In a still frame, in the vast desert, an oasis nestled among dunes, featuring tall palm trees and an air of serenity",
+    "dimensions": [
+      "temporal_flickering"
+    ],
+    "seed_count": 25
+  },
+  {
+    "index": 49,
+    "id": "58f33079b1692adb",
+    "prompt": "A tranquil tableau of an ornate Victorian streetlamp standing on a cobblestone street corner, illuminating the empty night",
+    "dimensions": [
+      "temporal_flickering"
+    ],
+    "seed_count": 25
+  },
+  {
+    "index": 67,
+    "id": "069fe45604206efd",
+    "prompt": "A tranquil tableau of a country estate's library featured elegant wooden shelves",
+    "dimensions": [
+      "temporal_flickering"
+    ],
+    "seed_count": 25
+  },
+  {
+    "index": 80,
+    "id": "236235be2594d52c",
+    "prompt": "a cow and an elephant",
+    "dimensions": [
+      "multiple_objects"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 96,
+    "id": "44f66fc7b75070cc",
+    "prompt": "an umbrella and a handbag",
+    "dimensions": [
+      "multiple_objects"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 103,
+    "id": "ce607f55bc00cac6",
+    "prompt": "a frisbee and skis",
+    "dimensions": [
+      "multiple_objects"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 109,
+    "id": "7d34ee704cd94679",
+    "prompt": "a baseball glove and a skateboard",
+    "dimensions": [
+      "multiple_objects"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 111,
+    "id": "41ed4ea154572c76",
+    "prompt": "a surfboard and a tennis racket",
+    "dimensions": [
+      "multiple_objects"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 113,
+    "id": "3a190892e374158e",
+    "prompt": "a bottle and a chair",
+    "dimensions": [
+      "multiple_objects"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 120,
+    "id": "093c67f8c71262fd",
+    "prompt": "a bus and a traffic light",
+    "dimensions": [
+      "multiple_objects"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 155,
+    "id": "cf5bba23e9d7350e",
+    "prompt": "a person and a toothbrush",
+    "dimensions": [
+      "multiple_objects"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 175,
+    "id": "13c130521ed762d4",
+    "prompt": "A person is shooting goal (soccer)",
+    "dimensions": [
+      "human_action"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 184,
+    "id": "e5f36ec019f9abb3",
+    "prompt": "A person is shaking hands",
+    "dimensions": [
+      "human_action"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 189,
+    "id": "146c880003df2f88",
+    "prompt": "A person is flying kite",
+    "dimensions": [
+      "human_action"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 196,
+    "id": "8e7e8a6f9ac3ff0d",
+    "prompt": "A person is playing controller",
+    "dimensions": [
+      "human_action"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 201,
+    "id": "34e3e68e934d4ed2",
+    "prompt": "A person is planting trees",
+    "dimensions": [
+      "human_action"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 203,
+    "id": "bf67bb1d4486a256",
+    "prompt": "A person is robot dancing",
+    "dimensions": [
+      "human_action"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 215,
+    "id": "26cd74edd148169a",
+    "prompt": "A person is hugging",
+    "dimensions": [
+      "human_action"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 229,
+    "id": "35705c6f66f8332b",
+    "prompt": "A person is driving car",
+    "dimensions": [
+      "human_action"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 237,
+    "id": "162f126778cf187e",
+    "prompt": "A person is catching or throwing baseball",
+    "dimensions": [
+      "human_action"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 251,
+    "id": "fdcd91f9ffa6ec65",
+    "prompt": "A person is barbequing",
+    "dimensions": [
+      "human_action"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 261,
+    "id": "3c3bf0c255e37397",
+    "prompt": "a person walking in the snowstorm",
+    "dimensions": [
+      "dynamic_degree",
+      "motion_smoothness",
+      "subject_consistency"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 266,
+    "id": "8423d29016cf50e5",
+    "prompt": "a bicycle slowing down to stop",
+    "dimensions": [
+      "dynamic_degree",
+      "motion_smoothness",
+      "subject_consistency"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 271,
+    "id": "72825da947827065",
+    "prompt": "a car accelerating to gain speed",
+    "dimensions": [
+      "dynamic_degree",
+      "motion_smoothness",
+      "subject_consistency"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 272,
+    "id": "07feaab11005db3a",
+    "prompt": "a motorcycle cruising along a coastal highway",
+    "dimensions": [
+      "dynamic_degree",
+      "motion_smoothness",
+      "subject_consistency"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 314,
+    "id": "99b18faccbfca5d8",
+    "prompt": "a cow chewing cud while resting in a tranquil barn",
+    "dimensions": [
+      "dynamic_degree",
+      "motion_smoothness",
+      "subject_consistency"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 315,
+    "id": "5c693c596fe16852",
+    "prompt": "a cow running to join a herd of its kind",
+    "dimensions": [
+      "dynamic_degree",
+      "motion_smoothness",
+      "subject_consistency"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 319,
+    "id": "9bc51331c9424537",
+    "prompt": "a bear catching a salmon in its powerful jaws",
+    "dimensions": [
+      "dynamic_degree",
+      "motion_smoothness",
+      "subject_consistency"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 337,
+    "id": "1cb78dba07d74a7b",
+    "prompt": "a boat",
+    "dimensions": [
+      "object_class"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 342,
+    "id": "5662797c6d4c27f9",
+    "prompt": "a bench",
+    "dimensions": [
+      "object_class"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 360,
+    "id": "9c0af891499fa032",
+    "prompt": "a snowboard",
+    "dimensions": [
+      "object_class"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 373,
+    "id": "1736abb91ae76679",
+    "prompt": "a spoon",
+    "dimensions": [
+      "object_class"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 378,
+    "id": "50982fe25d73be52",
+    "prompt": "an orange",
+    "dimensions": [
+      "object_class"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 381,
+    "id": "6a16838c5a4d62a9",
+    "prompt": "a hot dog",
+    "dimensions": [
+      "object_class"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 406,
+    "id": "61db0d0f9423e164",
+    "prompt": "a hair drier",
+    "dimensions": [
+      "object_class"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 407,
+    "id": "d0ed2b0146b43cbd",
+    "prompt": "a toothbrush",
+    "dimensions": [
+      "object_class"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 414,
+    "id": "22a14806d95babcf",
+    "prompt": "a pink bicycle",
+    "dimensions": [
+      "color"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 415,
+    "id": "d720ac74ebff1359",
+    "prompt": "a black bicycle",
+    "dimensions": [
+      "color"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 422,
+    "id": "7e29f222134dc34c",
+    "prompt": "a purple car",
+    "dimensions": [
+      "color"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 432,
+    "id": "49fce5ff3ddd74a0",
+    "prompt": "a pink bird",
+    "dimensions": [
+      "color"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 443,
+    "id": "d2e1099bb7523961",
+    "prompt": "an orange umbrella",
+    "dimensions": [
+      "color"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 455,
+    "id": "34dbf210a8ce1f19",
+    "prompt": "a black suitcase",
+    "dimensions": [
+      "color"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 458,
+    "id": "9dbb6d98e0a0d5d9",
+    "prompt": "a green bowl",
+    "dimensions": [
+      "color"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 483,
+    "id": "e5d7c149da3939c0",
+    "prompt": "a white clock",
+    "dimensions": [
+      "color"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 485,
+    "id": "1b304be982e9194f",
+    "prompt": "a green vase",
+    "dimensions": [
+      "color"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 500,
+    "id": "eafda7e714f657b7",
+    "prompt": "A beautiful coastal beach in spring, waves lapping on sand, watercolor painting",
+    "dimensions": [
+      "appearance_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 501,
+    "id": "5dbc608dde449d96",
+    "prompt": "A beautiful coastal beach in spring, waves lapping on sand, surrealism style",
+    "dimensions": [
+      "appearance_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 510,
+    "id": "0039622f472dec7a",
+    "prompt": "The bund Shanghai, surrealism style",
+    "dimensions": [
+      "appearance_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 515,
+    "id": "43b37442635f52ad",
+    "prompt": "a shark is swimming in the ocean, pixel art",
+    "dimensions": [
+      "appearance_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 519,
+    "id": "85a8d20195209c21",
+    "prompt": "a shark is swimming in the ocean, surrealism style",
+    "dimensions": [
+      "appearance_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 522,
+    "id": "133baa42b3bfa270",
+    "prompt": "A panda drinking coffee in a cafe in Paris by Hokusai, in the style of Ukiyo",
+    "dimensions": [
+      "appearance_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 541,
+    "id": "adec3b130ea12820",
+    "prompt": "Gwen Stacy reading a book, black and white",
+    "dimensions": [
+      "appearance_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 560,
+    "id": "926489e2bceb90e5",
+    "prompt": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, pixel art",
+    "dimensions": [
+      "appearance_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 571,
+    "id": "8b9beb16cbcaf327",
+    "prompt": "An astronaut flying in space, animated style",
+    "dimensions": [
+      "appearance_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 590,
+    "id": "2fff5f040500a2a2",
+    "prompt": "A beautiful coastal beach in spring, waves lapping on sand, with an intense shaking effect",
+    "dimensions": [
+      "temporal_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 599,
+    "id": "dcf2916a9e589095",
+    "prompt": "The bund Shanghai, tilt down",
+    "dimensions": [
+      "temporal_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 630,
+    "id": "eece211f87e5b56b",
+    "prompt": "A cute happy Corgi playing in park, sunset, with an intense shaking effect",
+    "dimensions": [
+      "temporal_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 636,
+    "id": "483f797c4ece5b01",
+    "prompt": "Gwen Stacy reading a book, pan left",
+    "dimensions": [
+      "temporal_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 638,
+    "id": "6aa2f2534d84d7ee",
+    "prompt": "Gwen Stacy reading a book, tilt up",
+    "dimensions": [
+      "temporal_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 642,
+    "id": "3f3743672e80b944",
+    "prompt": "Gwen Stacy reading a book, racking focus",
+    "dimensions": [
+      "temporal_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 645,
+    "id": "d8a6ef0b53f594a9",
+    "prompt": "A boat sailing leisurely along the Seine River with the Eiffel Tower in background, zoom out",
+    "dimensions": [
+      "temporal_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 672,
+    "id": "1b43355d8262b0e3",
+    "prompt": "An astronaut flying in space, racking focus",
+    "dimensions": [
+      "temporal_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 675,
+    "id": "6df00197aa3f2f42",
+    "prompt": "Snow rocky mountains peaks canyon. snow blanketed rocky mountains surround and shadow deep canyons. the canyons twist and bend through the high elevated mountain peaks, zoom out",
+    "dimensions": [
+      "temporal_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 678,
+    "id": "12bc94906f121501",
+    "prompt": "Snow rocky mountains peaks canyon. snow blanketed rocky mountains surround and shadow deep canyons. the canyons twist and bend through the high elevated mountain peaks, tilt up",
+    "dimensions": [
+      "temporal_style"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 693,
+    "id": "0b0aef196e4e8af3",
+    "prompt": "Fireworks.",
+    "dimensions": [
+      "aesthetic_quality",
+      "imaging_quality",
+      "overall_consistency"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 699,
+    "id": "a0461a248848b1c2",
+    "prompt": "Snow rocky mountains peaks canyon. snow blanketed rocky mountains surround and shadow deep canyons. the canyons twist and bend through the high elevated mountain peaks.",
+    "dimensions": [
+      "aesthetic_quality",
+      "imaging_quality",
+      "overall_consistency"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 706,
+    "id": "3c9950e60ac3d298",
+    "prompt": "time lapse of sunrise on mars.",
+    "dimensions": [
+      "aesthetic_quality",
+      "imaging_quality",
+      "overall_consistency"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 710,
+    "id": "0426656f4768e378",
+    "prompt": "happy dog wearing a yellow turtleneck, studio, portrait, facing camera, dark background",
+    "dimensions": [
+      "aesthetic_quality",
+      "imaging_quality",
+      "overall_consistency"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 716,
+    "id": "4df4937f8b2516ea",
+    "prompt": "A raccoon that looks like a turtle, digital art.",
+    "dimensions": [
+      "aesthetic_quality",
+      "imaging_quality",
+      "overall_consistency"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 721,
+    "id": "77f26307b1463820",
+    "prompt": "Macro slo-mo. Slow motion cropped closeup of roasted coffee beans falling into an empty bowl.",
+    "dimensions": [
+      "aesthetic_quality",
+      "imaging_quality",
+      "overall_consistency"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 725,
+    "id": "3e6b9c808a638dd5",
+    "prompt": "Vampire makeup face of beautiful girl, red contact lenses.",
+    "dimensions": [
+      "aesthetic_quality",
+      "imaging_quality",
+      "overall_consistency"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 747,
+    "id": "039a84bf3db84e68",
+    "prompt": "A beautiful coastal beach in spring, waves lapping on sand by Vincent van Gogh",
+    "dimensions": [
+      "aesthetic_quality",
+      "imaging_quality",
+      "overall_consistency"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 760,
+    "id": "71033f07b8354b92",
+    "prompt": "A panda playing on a swing set",
+    "dimensions": [
+      "aesthetic_quality",
+      "imaging_quality",
+      "overall_consistency"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 777,
+    "id": "890cabe271136403",
+    "prompt": "arch",
+    "dimensions": [
+      "background_consistency",
+      "scene"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 809,
+    "id": "a62a941752f66b29",
+    "prompt": "gas station",
+    "dimensions": [
+      "background_consistency",
+      "scene"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 811,
+    "id": "1947f124d15fb2d5",
+    "prompt": "golf course",
+    "dimensions": [
+      "background_consistency",
+      "scene"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 816,
+    "id": "d6e21286621a8586",
+    "prompt": "house",
+    "dimensions": [
+      "background_consistency",
+      "scene"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 835,
+    "id": "847fd46115c91996",
+    "prompt": "parking lot",
+    "dimensions": [
+      "background_consistency",
+      "scene"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 841,
+    "id": "7769b9349a664295",
+    "prompt": "science museum",
+    "dimensions": [
+      "background_consistency",
+      "scene"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 842,
+    "id": "528159b45697166b",
+    "prompt": "shower",
+    "dimensions": [
+      "background_consistency",
+      "scene"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 849,
+    "id": "16d1c76df24f2f30",
+    "prompt": "supermarket",
+    "dimensions": [
+      "background_consistency",
+      "scene"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 852,
+    "id": "d85c6e9e2a224746",
+    "prompt": "outdoor track",
+    "dimensions": [
+      "background_consistency",
+      "scene"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 866,
+    "id": "66567332f7d31190",
+    "prompt": "a stop sign on the left of a parking meter, front view",
+    "dimensions": [
+      "spatial_relationship"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 872,
+    "id": "877d4e84a908bfd6",
+    "prompt": "a dog on the left of a horse, front view",
+    "dimensions": [
+      "spatial_relationship"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 893,
+    "id": "c251d1c26608d5c0",
+    "prompt": "a frisbee on the left of a sports ball, front view",
+    "dimensions": [
+      "spatial_relationship"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 897,
+    "id": "bb55485dd5048171",
+    "prompt": "a tennis racket on the left of a frisbee, front view",
+    "dimensions": [
+      "spatial_relationship"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 900,
+    "id": "377eb69e8f61a531",
+    "prompt": "a toothbrush on the left of a sink, front view",
+    "dimensions": [
+      "spatial_relationship"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 912,
+    "id": "c9d9c6933879da4e",
+    "prompt": "a toaster on the top of a microwave, front view",
+    "dimensions": [
+      "spatial_relationship"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 922,
+    "id": "8013e72fa8fc9add",
+    "prompt": "an orange on the top of a carrot, front view",
+    "dimensions": [
+      "spatial_relationship"
+    ],
+    "seed_count": 5
+  },
+  {
+    "index": 936,
+    "id": "fe3421aa1a744c47",
+    "prompt": "a snowboard on the top of a kite, front view",
+    "dimensions": [
+      "spatial_relationship"
+    ],
+    "seed_count": 5
+  }
+]

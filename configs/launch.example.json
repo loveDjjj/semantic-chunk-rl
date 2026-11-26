@@ -1,0 +1,17 @@
+{
+  "commands": {
+    "sft.teacher": {"args": ["--config", "sft.json", "--prompts", "../data/teacher.jsonl", "--include-official-metadata", "../data/vbench.json", "--run", "../runs/teacher-drafts"]},
+    "sft.prepare": {"args": ["--labels", "../data/reviewed.jsonl", "--include-official-metadata", "../data/vbench.json", "--output", "../datasets/sft/teacher-2000-v1"]},
+    "sft.train": {
+      "torchrun": ["--standalone", "--nproc-per-node=4"],
+      "args": ["--config", "sft.json", "--run", "../runs/teacher-sft", "--model-path", "/shared/semantic-chunk-dependencies/models/Qwen3.5-4B", "--dataset", "../datasets/sft/teacher-2000-v1", "--manifest-sha256", "REPLACE_WITH_REVIEWED_SHA256"]
+    },
+    "rl.check": {"args": ["--recipe", "rl-whole24.json", "--candidate", "../runs/joint/config.json", "--approvals", "/shared/semantic-chunk-dependencies/configs/pins.json"]},
+    "rl.prepare": {"args": ["--recipe", "rl-whole24.json", "--paths", "/shared/semantic-chunk-dependencies/configs/paths.json", "--cluster", "cluster.runtime.json", "--approvals", "/shared/semantic-chunk-dependencies/configs/pins.json", "--run", "../runs/joint"]},
+    "rl.train": {"args": ["--run", "../runs/joint"]},
+    "rl.diagnose": {"args": ["../runs/joint"]},
+    "eval.prepare": {"args": ["--config", "vbench.json", "--run", "../runs/vbench-sft", "--arm", "sft", "--paths", "/shared/semantic-chunk-dependencies/configs/paths.json", "--official-metadata", "../data/vbench.json", "--vbench-source", "/shared/semantic-chunk-dependencies/third_party/vbench", "--vbench-weights", "/shared/semantic-chunk-dependencies/models/VBench-eval-v1"]},
+    "eval.generate": {"args": ["--run", "../runs/vbench-sft", "--arm", "sft"]},
+    "eval.vbench": {"args": ["../runs/vbench-sft", "--arm", "sft"]}
+  }
+}

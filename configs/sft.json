@@ -1,0 +1,16 @@
+{
+  "teacher": {
+    "model": "gpt-6.2-sol",
+    "effort": "low",
+    "workers": 4,
+    "attempts": 3
+  },
+  "train": {
+    "seed": 250,
+    "learning_rate": 0.0001,
+    "lora_rank": 8,
+    "lora_alpha": 16,
+    "validation_batch_size": 4,
+    "max_new_tokens": 512
+  }
+}

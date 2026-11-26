@@ -1,0 +1,38 @@
+{
+  "asset_root": "/shared/semantic-chunk-dependencies",
+  "assets": {
+    "planner_model": "models/Qwen3.5-4B",
+    "planner_adapter": "models/planner-sft-4b-2ep/adapter",
+    "executor": {
+      "upstream": "upstream/LongLive-1.3B",
+      "wan": "models/Wan2.1-T2V-1.3B",
+      "backbone": "models/LongLive-1.3B/models/longlive_base.pt",
+      "base_adapter": "models/LongLive-1.3B/models/lora.pt",
+      "policy_adapter": "assets/executor_reference"
+    },
+    "rewards": {
+      "quality": {
+        "python": "runtime/vbench-v1/bin/python",
+        "source": "third_party/vbench",
+        "weights": "models/VBench",
+        "max_frames": 16,
+        "batch_size": 4
+      },
+      "judge": {
+        "python": "runtime/train-v1/bin/python",
+        "weights": "models/Qwen3-VL-8B-Instruct",
+        "max_frames": 16,
+        "max_new_tokens": 240,
+        "batch_size": 2,
+        "pixels_per_frame": 65536,
+        "contract_cache": "cache/contracts"
+      }
+    }
+  },
+  "python": "runtime/train-v1/bin/python",
+  "role_python": {
+    "actor": "runtime/planner-joint-v1/bin/python",
+    "planner": "runtime/planner-joint-v1/bin/python"
+  },
+  "dataset": "data/prompts5000.json"
+}

@@ -1,0 +1,129 @@
+{
+  "schema_version": 3,
+  "seed": 20261117,
+  "plan": {
+    "allowed_chunks": [
+      1,
+      2,
+      4,
+      6
+    ],
+    "max_segments": 5,
+    "max_total_chunks": 30
+  },
+  "training": {
+    "mode": "joint",
+    "planner_backend": "verl",
+    "planner_learning_rate": 5e-7,
+    "executor_learning_rate": 0.000001,
+    "kl_beta": 0.01,
+    "clip_epsilon": 0.2,
+    "parallel_updates": true,
+    "score_attempts": 2,
+    "planner_credit": "whole-plan-v1"
+  },
+  "sampling": {
+    "planner_candidates": 4,
+    "executions_per_candidate": 4,
+    "max_new_tokens": 2048,
+    "truncate_at_limit": true
+  },
+  "adaptive_sampling": [],
+  "fixed_sampling": [
+    4,
+    4
+  ],
+  "batch_prompts": 24,
+  "dedicated_services": true,
+  "checkpoint_interval": 2,
+  "vbench_watch": {
+    "every_steps": 20,
+    "inventory_node": 5,
+    "local_root": "/var/tmp/semantic-chunk-vbench",
+    "prompts": "vbench-periodic-prompts.json",
+    "recipe": "vbench.json",
+    "metadata_relative_to_vbench": "vbench/VBench_full_info.json",
+    "weights_relative_to_training_weights": "../VBench-eval-v1"
+  },
+  "checkpoint_keep_every": 20,
+  "keep_checkpoints": 1,
+  "pipeline_depth": 2,
+  "pipeline_cache_gib": 8,
+  "dispatch_warmup": 1,
+  "reuse_identical_executions": true,
+  "full_dataset": true,
+  "repeat_dataset": false,
+  "wall_seconds": 43200,
+  "stream_plans": true,
+  "frozen_text_copy": false,
+  "shared_latent_transport": true,
+  "run_local_contract_cache": true,
+  "event_cache_backend": "dispatcher-v1",
+  "dataset_sha256": "00e55691af7ab6b4879b390294ee15b4176148b08ba2f1d25257fdc93a9f1094",
+  "reward": {
+    "mode": "event-v2",
+    "aggregation": "global-sq-v1",
+    "quality_weight": 0.5,
+    "completion_weight": 0.6,
+    "quality_components": {
+      "imaging": 0.25,
+      "aesthetic": 0.2,
+      "consistency": 0.15,
+      "motion": 0.15,
+      "dynamics": 0.15,
+      "physics": 0.1
+    }
+  },
+  "reward_protocol": {
+    "version": "event-reward-v2",
+    "events": "source-quoted-dag-with-explicit-order-and-requested-cuts",
+    "attribution": "global-semantic-and-quality-equal-for-both-policies",
+    "event_evidence": "per-event-sampled-frame-witnesses-missing-is-not-unknown",
+    "boundaries": "no-segment-boundary-term",
+    "local_dynamics": "not-applicable",
+    "judge_sampling": "16-uniform-frames-global-only",
+    "flow": "consecutive-frames-applicable-only",
+    "timestamp_evidence": "sampled-absolute-frame-id-strict-precedence-target-only-local",
+    "event_decisions": "bounded-fields-v1",
+    "evidence_recovery": "bounded-event-and-slot-choices-on-two-frame-samples-then-unscorable",
+    "quality_ratings": "video-conditioned-dynamics-and-physics-with-event-witnesses",
+    "contract_recovery": "one-schema-retry-then-one-validated-source-span-repair",
+    "contract_audit": "versioned-contract-and-assignment-cache-with-invalid-responses",
+    "event_choice_batch_size": 2,
+    "scopes": "whole-video-only"
+  },
+  "experiment_protocol": "teacher-4b-longlive13-whole-sq50-v1",
+  "executor_denoising": "segment-joint",
+  "sampler": "indexed-noise-v1",
+  "preflight": {
+    "protocol": "teacher-4b-longlive13-whole-sq50-v1",
+    "training": {
+      "mode": "joint",
+      "planner_backend": "verl",
+      "planner_credit": "whole-plan-v1"
+    },
+    "planner": {
+      "model_type": "qwen3_5",
+      "text_hidden_size": 2560,
+      "text_layers": 32,
+      "teacher_manifest_format": "reviewed-teacher-sft-v1",
+      "forbidden_legacy_sft_sha256": "ee2cdc76cb004a2b3ff21c42a1be0a2b90a157cea49adcf4261b789e3af5c4c7"
+    },
+    "executor": {
+      "denoising": "segment-joint",
+      "backbone_sha256": "10a2aa8fcf89c77d9033f4c117405412a690e289625766619d293f0c5a208ee7",
+      "base_adapter_sha256": "c4e43b87d62d4b0614b496773639f1ab170a7ee486dc23407901e9d3a5ebc07a"
+    },
+    "acceptance_gates": [
+      "Review training/evaluation near-duplicate exclusions and teacher validation samples for missing, hallucinated or misordered events.",
+      "Seal all model shard, tokenizer, runtime, dataset, reward-code/config, sampler, PEFT-config and policy/reference hashes and empty output roots for each arm.",
+      "Qualify the Qwen3.5 actor on the actual GPU image: the joint trainer selects VerlPlannerPolicy and requires verl 0.5.0; prove constrained old/new log-probability replay and a finite nonzero gradient.",
+      "Smoke-test both adapters on a segment-joint rollout: identical reference initializations, nonzero individual parameter deltas and version increments, and no executor update for frozen controls.",
+      "Save and independently reload both policies, references, optimizer states and versions. Reject mismatched identity and repeat a fixed seed before releasing GPUs for a full run.",
+      "Run frozen/frozen, planner-only, executor-only and joint controls at matched prompt, seed, video, duration and compute budgets with identical evaluation coverage."
+    ]
+  },
+  "services": {
+    "trace_stages": true
+  }
+}

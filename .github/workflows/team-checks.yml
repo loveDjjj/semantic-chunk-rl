@@ -1,0 +1,23 @@
+name: Team checks
+on: [push, pull_request]
+permissions:
+  contents: read
+
+jobs:
+  checkout-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      PYTHONPATH: src
+      PYTHONDONTWRITEBYTECODE: "1"
+      CUDA_VISIBLE_DEVICES: ""
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Check indexed files and CPU entrypoints
+        run: |
+          python3 tools/check_git_sync.py
+          python3 -m unittest discover -s tests -p test_git_sync.py
+          python3 -m unittest discover -s tests/runtime -p test_shell_entrypoints.py
+          python3 -m unittest discover -s tests/runtime -p test_code_release.py

@@ -1,0 +1,14 @@
+{
+  "seed": 20261125,
+  "official_sha256": "5dd2de80ee43cda750b2b72ea7023657c0b90d3702041c7e4608c65dbe50dccd",
+  "rl_sha256": "00e55691af7ab6b4879b390294ee15b4176148b08ba2f1d25257fdc93a9f1094",
+  "official_by_primary_dimension": {
+    "temporal_flickering": 62, "human_action": 90, "subject_consistency": 65,
+    "temporal_style": 64, "overall_consistency": 65, "scene": 40, "color": 33,
+    "multiple_objects": 43, "object_class": 37, "appearance_style": 51,
+    "spatial_relationship": 50
+  },
+  "rl_by_length": {"short": 400, "medium": 600, "long": 400},
+  "rl_word_cutoffs": [49, 59],
+  "near_duplicate_cosine": 0.70
+}
