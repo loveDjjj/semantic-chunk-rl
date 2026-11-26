@@ -30,11 +30,21 @@ def prepare_main(argv=None):
     p.add_argument('--vbench-source',type=Path,required=True)
     p.add_argument('--vbench-weights',type=Path,required=True)
     p.add_argument('--checkpoint',type=Path)
+    p.add_argument('--planner-variant',choices=('pre_sft','sft'),
+                   help='Evaluate the base planner or the configured SFT adapter without an RL checkpoint')
+    p.add_argument('--base-executor',action='store_true',
+                   help='Keep the original LongLive backbone and base LoRA; omit the trainable policy adapter')
+    p.add_argument('--text-batch-size',type=int,default=8,choices=range(1,17),
+                   help='Maximum number of distinct captions in one Wan T5 forward')
     p.add_argument('--planner-python',type=Path)
     p.add_argument('--denoising-mode',choices=('segment-joint','causal-chunkwise'))
     p.add_argument('--native-chunks',type=int,help='Disable the planner: denoise this many native chunks with one original prompt')
     a=p.parse_args(argv)
     native=a.native_chunks is not None
+    if a.planner_variant and (native or a.checkpoint):
+        p.error('--planner-variant is for planned evaluation without --native-chunks or --checkpoint')
+    if a.base_executor and a.checkpoint:
+        p.error('--base-executor cannot be combined with --checkpoint')
     if native and (not 1<=a.native_chunks<=PlanLimits().max_total_chunks or a.checkpoint
                    or a.planner_python or a.denoising_mode=='segment-joint'):
         p.error('Native mode requires a valid fixed chunk count and no checkpoint, planner or joint denoising')
@@ -49,9 +59,12 @@ def prepare_main(argv=None):
         if v is None:return None
         return str((root/v).resolve())
     raw=paths['assets']
-    assets={'planner_model':None if native else asset(raw['planner_model']), 'planner_adapter':None if native else asset(raw.get('planner_adapter')),
+    if a.planner_variant=='sft' and not raw.get('planner_adapter'):
+        raise ValueError('--planner-variant sft requires a configured planner_adapter')
+    assets={'planner_model':None if native else asset(raw['planner_model']),
+            'planner_adapter':None if native or a.planner_variant=='pre_sft' else asset(raw.get('planner_adapter')),
             'executor':{k:asset(v) for k,v in raw['executor'].items()}}
-    if native:assets['executor']['policy_adapter']=None
+    if native or a.base_executor:assets['executor']['policy_adapter']=None
     required=('upstream','wan','backbone','base_adapter')
     for k in required:
         if not assets['executor'].get(k):raise ValueError('Missing executor asset: '+k)
@@ -110,7 +123,7 @@ def prepare_main(argv=None):
     planner_python=None if native else (a.planner_python or paths.get('role_python',{}).get('planner'))
     planner_python=asset(planner_python) if planner_python else None
     gen=dict(assets=assets,weights_sha256=model_hashes,arm=arm,plan=limits,fps=defaults['fps'],max_new_tokens=defaults['max_new_tokens'],
-             denoising_mode=mode,planner_python=planner_python,native_chunks=a.native_chunks)
+             denoising_mode=mode,planner_python=planner_python,native_chunks=a.native_chunks,text_batch_size=a.text_batch_size)
     protocol=dict(score,generation_sha256=digest(gen))
     cfg=dict(arms={a.arm:arm},assets=assets,formula=defaults['formula'],metric_modules_sha256=modules,
              recipe=defaults,recipe_sha256=digest(defaults),
@@ -154,11 +167,30 @@ def native_plan(prompt, chunks):
     return FinitePlan((Segment(prompt, chunks),))
 
 
+def encode_caption_window(plans, encoder, batch_size):
+    """Encode distinct captions across a bounded window of independent tasks."""
+    unique = list(dict.fromkeys(s.caption for plan in plans for s in plan.segments))
+    tok = encoder.tokenizer
+    by_caption = {}
+    for start in range(0, len(unique), batch_size):
+        group = unique[start:start+batch_size]
+        if any(len(tok.tokenizer(tok._clean(c), truncation=False, add_special_tokens=True)['input_ids']) > tok.seq_len
+               for c in group):
+            raise ValueError('Caption would be truncated by T5')
+        # Upstream Wan pads to a fixed length and masks padding per row.
+        encoded = {k:v.detach().cpu() for k,v in encoder(text_prompts=group).items()}
+        for i, caption in enumerate(group):
+            # torch.save serializes an entire backing storage even for a one-row view.
+            by_caption[caption] = {k:v[i:i+1].clone() for k,v in encoded.items()}
+    return [{s.caption:by_caption[s.caption] for s in plan.segments} for plan in plans]
+
+
 def main(argv=None):
     p=argparse.ArgumentParser();p.add_argument('--run',required=True);p.add_argument('--arm',required=True)
     p.add_argument('--shard',type=int,default=0);p.add_argument('--shards',type=int,default=1)
     p.add_argument('--task-ids-file');a=p.parse_args(argv)
-    run=Path(a.run).resolve();cfg=json.loads((run/'config.json').read_text());arm=a.arm
+    # Preserve the caller's shared mount name in records read by other nodes.
+    run=Path(a.run).absolute();cfg=json.loads((run/'config.json').read_text());arm=a.arm
     if arm not in cfg['arms'] or Path(arm).name!=arm or arm in ('.','..'):raise ValueError('Unknown or unsafe arm')
     for name in ('videos','records','plans'):(run/name/arm).mkdir(parents=True,exist_ok=True)
     cfg.setdefault('conditions_dir',os.environ.get('SCRL_EVAL_CONDITIONS',str(run/'conditions')))
@@ -218,35 +250,31 @@ def main(argv=None):
             from self_forcing import longlive_wan_wrapper as wrapper
             wrapper.WAN2_1_CHECKPOINT=str(Path(assets['executor']['wan']).resolve())
             encoder=wrapper.WanTextEncoder().to(device='cuda:0',dtype=torch.bfloat16).eval().requires_grad_(False)
-            for index,task in enumerate(need_plan):
-                limits();status('planning',completed=index,tasks=len(need_plan),task=task['id'])
+            def plan_task(task):
                 if native:
-                    plan,ids=native_plan(task['prompt'],cfg['native_chunks']),[]
-                elif policy is None:
+                    return native_plan(task['prompt'],cfg['native_chunks']),[]
+                if policy is None:
                     saved=json.loads((planned/(task['id']+'.json')).read_bytes())
-                    plan=FinitePlan.from_dict(saved['plan'],PlanLimits(**cfg['plan']))
-                    ids=saved['ids']
-                else:
-                    plan,response,_=policy.sample(task['prompt'],task['planner_seed'],max_new_tokens=cfg['max_new_tokens'],anchor_only=True)
-                    ids=response[0].tolist()
-                captions=list(dict.fromkeys(s.caption for s in plan.segments))
-                tok=encoder.tokenizer
-                mapping={}
-                for start in range(0,len(captions),4):
-                    group=captions[start:start+4]
-                    if any(len(tok.tokenizer(tok._clean(c),truncation=False,add_special_tokens=True)['input_ids'])>tok.seq_len for c in group):
-                        raise ValueError('Caption would be truncated by T5')
-                    with torch.autocast('cuda',dtype=torch.bfloat16):encoded=encoder(text_prompts=group)
-                    encoded={k:v.detach().cpu() for k,v in encoded.items()}
-                    for i,caption in enumerate(group):
-                        mapping[caption]={k:v[i:i+1] for k,v in encoded.items()}
-                cp=Path(cfg['conditions_dir'])/arm/(task['id']+'.pt');cp.parent.mkdir(parents=True,exist_ok=True)
-                temporary=cp.with_suffix('.tmp.pt')
-                torch.save(mapping,temporary);temporary.replace(cp)
-                atomic_json(run/'plans'/arm/(task['id']+'.json'),dict(task,plan=plan.to_dict(),
-                    conditions=str(cp),conditions_sha256=file_sha256(cp),planner_response_ids=ids,
-                    policy_version=version,protocol_sha256=cfg['protocol_sha256']))
-            del policy,encoder,mapping
+                    return FinitePlan.from_dict(saved['plan'],PlanLimits(**cfg['plan'])),saved['ids']
+                plan,response,_=policy.sample(task['prompt'],task['planner_seed'],max_new_tokens=cfg['max_new_tokens'],anchor_only=True)
+                return plan,response[0].tolist()
+            size=cfg.get('generation_identity',{}).get('text_batch_size')
+            window=size or 1  # Old manifests encoded up to four captions from one task.
+            for index in range(0,len(need_plan),window):
+                limits();batch=need_plan[index:index+window]
+                status('encoding',completed=index,tasks=len(need_plan),text_batch_size=size or 4)
+                entries=[plan_task(task) for task in batch]
+                with torch.autocast('cuda',dtype=torch.bfloat16):
+                    mappings=encode_caption_window([plan for plan,_ in entries],encoder,size or 4)
+                for task,(plan,ids),mapping in zip(batch,entries,mappings):
+                    cp=Path(cfg['conditions_dir'])/arm/(task['id']+'.pt');cp.parent.mkdir(parents=True,exist_ok=True)
+                    temporary=cp.with_suffix('.tmp.pt')
+                    torch.save(mapping,temporary);temporary.replace(cp)
+                    atomic_json(run/'plans'/arm/(task['id']+'.json'),dict(task,plan=plan.to_dict(),
+                        conditions=str(cp),conditions_sha256=file_sha256(cp),planner_response_ids=ids,
+                        policy_version=version,protocol_sha256=cfg['protocol_sha256']))
+                del mappings,mapping
+            del policy,encoder
             gc.collect();torch.cuda.empty_cache()
         jobs=[json.loads((run/'plans'/arm/(t['id']+'.json')).read_text()) for t in owned]
         jobs.sort(key=lambda j:(-sum(s['num_chunks'] for s in j['plan']['segments']),j['id']))
