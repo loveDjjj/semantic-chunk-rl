@@ -36,6 +36,8 @@ def prepare_main(argv=None):
                    help='Keep the original LongLive backbone and base LoRA; omit the trainable policy adapter')
     p.add_argument('--text-batch-size',type=int,default=8,choices=range(1,17),
                    help='Maximum number of distinct captions in one Wan T5 forward')
+    p.add_argument('--video-batch-size',type=int,choices=(1,2),default=1,
+                   help='Maximum number of identical segment shapes in a LongLive generation batch')
     p.add_argument('--planner-python',type=Path)
     p.add_argument('--denoising-mode',choices=('segment-joint','causal-chunkwise'))
     p.add_argument('--native-chunks',type=int,help='Disable the planner: denoise this many native chunks with one original prompt')
@@ -49,6 +51,8 @@ def prepare_main(argv=None):
                    or a.planner_python or a.denoising_mode=='segment-joint'):
         p.error('Native mode requires a valid fixed chunk count and no checkpoint, planner or joint denoising')
     mode=a.denoising_mode or ('causal-chunkwise' if native else 'segment-joint')
+    if a.video_batch_size == 2 and (mode != 'segment-joint' or not a.base_executor or a.checkpoint):
+        p.error('Video pairs require the frozen base executor and segment-joint denoising')
     if a.run.exists():raise FileExistsError(a.run)
     defaults=validate_recipe(read(a.config))
     if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]*',a.arm):raise ValueError('Unsafe arm name')
@@ -124,6 +128,8 @@ def prepare_main(argv=None):
     planner_python=asset(planner_python) if planner_python else None
     gen=dict(assets=assets,weights_sha256=model_hashes,arm=arm,plan=limits,fps=defaults['fps'],max_new_tokens=defaults['max_new_tokens'],
              denoising_mode=mode,planner_python=planner_python,native_chunks=a.native_chunks,text_batch_size=a.text_batch_size)
+    if a.video_batch_size > 1:
+        gen['video_batch_size'] = a.video_batch_size
     protocol=dict(score,generation_sha256=digest(gen))
     cfg=dict(arms={a.arm:arm},assets=assets,formula=defaults['formula'],metric_modules_sha256=modules,
              recipe=defaults,recipe_sha256=digest(defaults),
@@ -309,37 +315,77 @@ def main(argv=None):
                 atomic_json(run/'validation'/f'{arm}.json',{'state':'passed','id':job['id'],
                     'latent_sha256':record['latent_sha256'],'video_sha256':record['video_sha256'],'checked_unix':time.time()})
             atomic_json(run/'records'/arm/(job['id']+'.json'),record)
-        pending=[]
+        from scrl.evaluation.video_batches import shape_groups
+        size = cfg.get('generation_identity', {}).get('video_batch_size', 1)
+        if size != 1 and (not frozen or checkpoint or cfg['denoising_mode'] != 'segment-joint'):
+            raise ValueError('Video pairs require frozen segment-joint LongLive')
+        pending, oom_shapes = [], set()
+        index = 0
         with ThreadPoolExecutor(max_workers=1) as encoders:
-            for index,job in enumerate(jobs):
+            for group in shape_groups(jobs, size):
                 limits()
-                for f in pending:
-                    if f.done():f.result()
-                pending=[f for f in pending if not f.done()]
-                if len(pending)>=2:pending.pop(0).result()
-                existing=run/'records'/arm/(job['id']+'.json')
-                if existing.exists():
-                    record=json.loads(existing.read_text())
-                    if record['protocol_sha256']!=cfg['protocol_sha256'] or file_sha256(record['video'])!=record['video_sha256']:
-                        raise ValueError('Existing video does not match this evaluation')
+                ready = []
+                for job in group:
+                    existing = run/'records'/arm/(job['id']+'.json')
+                    if existing.exists():
+                        record = read(existing)
+                        if record['protocol_sha256'] != cfg['protocol_sha256'] or file_sha256(record['video']) != record['video_sha256']:
+                            raise ValueError('Existing video does not match this evaluation')
+                        continue
+                    if job['protocol_sha256'] != cfg['protocol_sha256'] or file_sha256(job['conditions']) != job['conditions_sha256']:
+                        raise ValueError('Plan or text conditions changed')
+                    plan = FinitePlan.from_dict(job['plan'], PlanLimits(**cfg['plan']))
+                    mapping = torch.load(job['conditions'], map_location='cpu', weights_only=True)
+                    if not {s.caption for s in plan.segments} <= mapping.keys():
+                        raise ValueError('Precomputed caption missing')
+                    ready.append((job, plan, mapping))
+                if not ready:
                     continue
-                if job['protocol_sha256']!=cfg['protocol_sha256'] or file_sha256(job['conditions'])!=job['conditions_sha256']:
-                    raise ValueError('Plan or text conditions changed')
-                plan=FinitePlan.from_dict(job['plan'],PlanLimits(**cfg['plan']))
-                backend.conditions.clear();backend.conditions.update(torch.load(job['conditions'],map_location='cpu',weights_only=True))
-                if not {s.caption for s in plan.segments}<=set(backend.conditions):raise ValueError('Precomputed caption missing')
-                backend.pipe.generator.seq_len=0
-                status('generating',submitted=index,tasks=len(jobs),task=job['id'],total_chunks=plan.total_chunks)
-                tick=time.monotonic();torch.cuda.reset_peak_memory_stats()
-                rollout=executor.rollout(plan,job['video_seed'],capture=False,retain_final_cache=False)
-                generation=time.monotonic()-tick
-                pixels=backend.decode(rollout.final.latents).numpy()
-                if len(pixels)!=plan.total_chunks*12-3:raise ValueError('Generated frame extent differs from plan')
-                record=dict(job,arm=arm,frames=len(pixels),fps=cfg['fps'],height=int(pixels.shape[1]),width=int(pixels.shape[2]),
-                    latent_sha256=tensor_hash(rollout.final.latents),generation_seconds=generation,
-                    generation_decode_seconds=time.monotonic()-tick,peak_allocated_gib=torch.cuda.max_memory_allocated()/2**30)
-                pending.append(encoders.submit(publish,job,pixels,record));del rollout,pixels
-            for f in pending:f.result()
+                shape = tuple(s.num_chunks for s in ready[0][1].segments)
+                ids = [row[0]['id'] for row in ready]
+                status('generating', submitted=index, tasks=len(jobs), task=ids[0], batch=ids, total_chunks=sum(shape))
+                tick = time.monotonic()
+                torch.cuda.reset_peak_memory_stats()
+                latents = None
+                if len(ready) == 2 and shape not in oom_shapes:
+                    try:
+                        latents = backend.rollout_eval_pair([r[1] for r in ready],
+                                    [r[0]['video_seed'] for r in ready], [r[2] for r in ready])
+                    except torch.cuda.OutOfMemoryError:
+                        oom_shapes.add(shape)
+                    if latents is None:
+                        gc.collect()
+                        torch.cuda.empty_cache()
+                paired = latents is not None
+                batch_seconds = time.monotonic() - tick
+                for i, (job, plan, mapping) in enumerate(ready):
+                    if paired:
+                        latent = latents[i]
+                        seconds = batch_seconds / len(ready)
+                    else:
+                        backend.conditions.clear()
+                        backend.conditions.update(mapping)
+                        backend.pipe.generator.seq_len = 0
+                        tick = time.monotonic()
+                        latent = executor.rollout(plan, job['video_seed'], capture=False, retain_final_cache=False).final.latents
+                        seconds = time.monotonic() - tick
+                    if len(pending) >= 2:
+                        pending.pop(0).result()
+                    tick = time.monotonic()
+                    pixels = backend.decode(latent).numpy()
+                    if len(pixels) != plan.total_chunks * 12 - 3:
+                        raise ValueError('Generated frame extent differs from plan')
+                    record = dict(job, arm=arm, frames=len(pixels), fps=cfg['fps'], height=int(pixels.shape[1]), width=int(pixels.shape[2]),
+                        latent_sha256=tensor_hash(latent), generation_seconds=seconds,
+                        generation_decode_seconds=seconds + time.monotonic()-tick, peak_allocated_gib=torch.cuda.max_memory_allocated()/2**30,
+                        actual_video_batch_size=len(ready) if paired else 1, batch_task_ids=ids if paired else [job['id']],
+                        batch_denoise_seconds=batch_seconds if paired else seconds, pair_oom_fallback=shape in oom_shapes)
+                    pending.append(encoders.submit(publish, job, pixels, record))
+                    del pixels, latent
+                    index += 1
+                del latents
+            for f in pending:
+                f.result()
         status('complete',completed=len(jobs),seconds=time.time()-started)
     except BaseException as error:
         status('failed',error=repr(error),traceback=traceback.format_exc());raise

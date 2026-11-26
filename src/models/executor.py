@@ -159,7 +159,7 @@ class LongLiveBackend:
                 encoder.to("cpu")
         return {k: v.to(self.device) for k, v in self.conditions[caption].items()}
 
-    def _initialize(self, total, live=None):
+    def _initialize(self, total, live=None, *, batch_size=1):
         pipe = self.pipe
         pipe.kv_cache1 = pipe.crossattn_cache = None
         pipe.local_attn_size = total
@@ -171,7 +171,7 @@ class LongLiveBackend:
                 module.local_attn_size = total
         capacity = total * pipe.frame_seq_length
         if live is None:
-            pipe._initialize_kv_cache(1, dtype=self.dtype, device=self.device, kv_cache_size_override=capacity)
+            pipe._initialize_kv_cache(batch_size, dtype=self.dtype, device=self.device, kv_cache_size_override=capacity)
         else:
             # Only private, single-seed history may be consumed in place. Grow one
             # tensor at a time rather than retaining two complete GPU caches.
@@ -184,7 +184,7 @@ class LongLiveBackend:
                     layer[key] = enlarged
                     del old
             pipe.kv_cache1 = live
-        pipe._initialize_crossattn_cache(1, dtype=self.dtype, device=self.device)
+        pipe._initialize_crossattn_cache(batch_size, dtype=self.dtype, device=self.device)
 
     def prefix_cache_bytes(self, frames):
         # The native Wan1.3B cache is [1, frames*1560, 12, 128], K and V,
@@ -303,6 +303,54 @@ class LongLiveBackend:
             return clone_tree(prediction), cache, tape
         finally:
             self.pipe.kv_cache1 = self.pipe.crossattn_cache = None
+
+    @torch.no_grad()
+    def rollout_eval_pair(self, plans, seeds, condition_maps):
+        """Denoise two independent videos in lockstep, with private per-row KV and text."""
+        if not (len(plans) == len(seeds) == len(condition_maps) == 2):
+            raise ValueError("Expected exactly two plans, seeds and condition maps")
+        shape = tuple(s.latent_frames for s in plans[0].segments)
+        if not shape or shape != tuple(s.latent_frames for s in plans[1].segments):
+            raise ValueError("Batched LongLive plans require identical segment frame counts")
+        if getattr(self, 'eval_chunkwise', False):
+            raise ValueError("Video microbatching supports segment-joint evaluation only")
+        start, history, live = 0, None, None
+        pipe = self.pipe
+        pipe.generator.seq_len = 0
+        try:
+            with self.autocast():
+                for segment_index, frames in enumerate(shape):
+                    conditions = [m[p.segments[segment_index].caption] for p, m in zip(plans, condition_maps)]
+                    if any(set(c) != {'prompt_embeds'} or c['prompt_embeds'].shape[0] != 1 for c in conditions):
+                        raise ValueError("Expected one encoded Wan caption per row")
+                    condition = {'prompt_embeds': torch.cat([c['prompt_embeds'] for c in conditions]).to(self.device)}
+                    self._initialize(start + frames, live, batch_size=2)
+                    if history is not None:
+                        self._recache(history, condition)
+
+                    def noise(phase):
+                        return torch.cat([indexed_noise(seed, start, frames, self.latent_shape,
+                            device=self.device, dtype=self.dtype, phase=phase) for seed in seeds])
+
+                    noisy = noise('initial')
+                    schedule = pipe.denoising_step_list
+                    for i, timestep in enumerate(schedule):
+                        prediction = self.forward(noisy, condition, timestep, start)
+                        if i + 1 < len(schedule):
+                            next_t = schedule[i + 1]
+                            innovation = noise(f"renoise:{float(next_t):.8g}")
+                            noisy = pipe.scheduler.add_noise(prediction.flatten(0, 1),
+                                innovation.flatten(0, 1), next_t * torch.ones(2*frames, device=self.device)
+                            ).unflatten(0, prediction.shape[:2])
+                    self.forward(prediction, condition, pipe.args.context_noise, start)
+                    if tuple(prediction.shape) != (2, frames, *self.latent_shape) or not torch.isfinite(prediction).all():
+                        raise RuntimeError("Invalid LongLive microbatch output")
+                    history = prediction if history is None else torch.cat((history, prediction), dim=1)
+                    live = pipe.kv_cache1
+                    start += frames
+            return history.detach().cpu().split(1)
+        finally:
+            pipe.kv_cache1 = pipe.crossattn_cache = None
 
     @torch.no_grad()
     def decode(self, latents):
