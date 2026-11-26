@@ -260,12 +260,12 @@ def main(argv=None):
             encoder=wrapper.WanTextEncoder().to(device='cuda:0',dtype=torch.bfloat16).eval().requires_grad_(False)
             def plan_task(task):
                 if native:
-                    return native_plan(task['prompt'],cfg['native_chunks']),[]
+                    return native_plan(task['prompt'],cfg['native_chunks']),[],0
                 if policy is None:
                     saved=json.loads((planned/(task['id']+'.json')).read_bytes())
-                    return FinitePlan.from_dict(saved['plan'],PlanLimits(**cfg['plan'])),saved['ids']
+                    return FinitePlan.from_dict(saved['plan'],PlanLimits(**cfg['plan'])),saved['ids'],saved.get('planner_batch_size',1)
                 plan,response,_=policy.sample(task['prompt'],task['planner_seed'],max_new_tokens=cfg['max_new_tokens'],anchor_only=True)
-                return plan,response[0].tolist()
+                return plan,response[0].tolist(),1
             size=cfg.get('generation_identity',{}).get('text_batch_size')
             window=size or 1  # Old manifests encoded up to four captions from one task.
             for index in range(0,len(need_plan),window):
@@ -273,13 +273,13 @@ def main(argv=None):
                 status('encoding',completed=index,tasks=len(need_plan),text_batch_size=size or 4)
                 entries=[plan_task(task) for task in batch]
                 with torch.autocast('cuda',dtype=torch.bfloat16):
-                    mappings=encode_caption_window([plan for plan,_ in entries],encoder,size or 4)
-                for task,(plan,ids),mapping in zip(batch,entries,mappings):
+                    mappings=encode_caption_window([plan for plan,_,_ in entries],encoder,size or 4)
+                for task,(plan,ids,planner_batch),mapping in zip(batch,entries,mappings):
                     cp=Path(cfg['conditions_dir'])/arm/(task['id']+'.pt');cp.parent.mkdir(parents=True,exist_ok=True)
                     temporary=cp.with_suffix('.tmp.pt')
                     torch.save(mapping,temporary);temporary.replace(cp)
                     atomic_json(run/'plans'/arm/(task['id']+'.json'),dict(task,plan=plan.to_dict(),
-                        conditions=str(cp),conditions_sha256=file_sha256(cp),planner_response_ids=ids,
+                        conditions=str(cp),conditions_sha256=file_sha256(cp),planner_response_ids=ids,planner_batch_size=planner_batch,
                         policy_version=version,protocol_sha256=cfg['protocol_sha256']))
                 del mappings,mapping
             del policy,encoder

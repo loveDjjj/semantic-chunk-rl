@@ -4,6 +4,10 @@
 
 ## 2026-11-26
 
+- **VBench Planner 默认单实例多提示词。** 新模板每卡一份 Planner 权重，每次解码前向最多处理 8 个提示词，任务各自维护随机数、语法和 EOS；`SCRL_EVAL_PLANNER_BATCH_SIZE=1` 仅用于串行调试。双进程是当日裸 4B 续跑的过渡记录，不作为后续默认或单实例吞吐证据。LongLive 配对视频 batch 2 与 Planner、T5 的 batch 分开；不改变 RL 的采样或优势分组。
+
+- **裸 4B 全量评测暂停后续跑。** 11:33:42 UTC 停止旧生成和评分，保留原分片已落盘的 3,363 份 sampled plan；当时成片、视频记录和正式 T5 plan 均为 0。恢复先以每卡两个独立 Planner 进程补同一分片的缺项，任务归属和 seed 不变。生成阶段目标 batch 2，仅在完整段长序列相同的任务间配对，显存不足退回单条；已有 sampled 中可配对 2,988 条，不是实测吞吐。SFT 未启动，详见[实验记录](experiments/20261126-vbench-full-4b-base-vs-sft-longlive-v1.md)。
+
 - **全量 VBench 裸 4B 基线。** 首次将完整 16 维、每组 6,220 个任务与历史 10% 子集分开登记。26 个生成分片于 11:23 UTC 启动；SFT 组未启动，暂无评测分数。固定裸 Planner 和 LongLive，两种解释器分阶段运行、T5 按 8 批处理并显式使用节点缓存，MP4 异步发布。新增[操作手册](vbench.md)、[实验记录](experiments/20261126-vbench-full-4b-base-vs-sft-longlive-v1.md)和单实例完整性评分入口。
 
 - **远端操作单独成册。** 共享盘路径、各角色解释器、Git 同步和 24 卡启动步骤统一维护在 [server.md](server.md)；[running.md](running.md) 聚焦各阶段输入、产物和排障。离线发布清单和回归测试同时收录两份手册。本次未改变训练配置，也未运行 GPU 作业。

@@ -225,6 +225,39 @@ class FinitePlanGrammar:
         return result
 
 
+class SeededBatchGrammar:
+    """Sample each masked row with its own RNG; HF commits the already drawn tokens."""
+
+    def __init__(self, grammar, width, seeds, device):
+        self.grammar, self.width = grammar, width
+        self.generators = [torch.Generator(device=device).manual_seed(seed) for seed in seeds]
+
+    def __call__(self, input_ids, scores):
+        if len(self.generators) != scores.shape[0]:
+            raise ValueError("Planner sampling does not support beam expansion")
+        g = self.grammar
+        responses = input_ids[:, self.width:].tolist()
+        masked = torch.full_like(scores, -torch.inf)
+        eos = g.tokenizer.eos_token_id
+        for i, ids in enumerate(responses):
+            if eos in ids:
+                masked[i,eos] = 0
+                continue
+            legal = g.allowed(g.state(ids))
+            if not legal:
+                raise ValueError("Plan has exhausted the generation resource budget")
+            key = (id(legal), scores.device)
+            if key not in g.device_support:
+                g.device_support[key] = (legal, torch.tensor(legal, device=scores.device))
+            support = g.device_support[key][1]
+            masked[i].index_copy_(0,support,scores[i].index_select(0,support))
+        probs = masked.float().softmax(-1)
+        choices = torch.stack([torch.multinomial(row, 1, generator=gen)
+                               for row,gen in zip(probs,self.generators)])
+        # The outer generation engine's argmax is over a singleton, not raw model logits.
+        return masked.fill_(-torch.inf).scatter_(1,choices,0.0)
+
+
 def token_log_probs(model, context, response, constraints):
     ids = torch.cat((context, response), dim=1)
     logits = model(input_ids=ids, attention_mask=torch.ones_like(ids), use_cache=False).logits
@@ -361,6 +394,37 @@ class PlannerPolicy:
         self.model.set_adapter(adapter)
         for name, parameter in self.model.named_parameters():
             parameter.requires_grad_(adapter == "default" and "lora_" in name and ".default." in name)
+
+    @torch.inference_mode()
+    def sample_eval_batch(self, prompts, seeds, *, max_new_tokens):
+        if not prompts or len(prompts) != len(seeds):
+            raise ValueError('A planner batch requires one seed per prompt')
+        if not self.base_inference:
+            self.activate('default')
+        rows = [self.tokenizer(generation_prefix(self.tokenizer,
+                    {"role":"user","content":instruction(p,self.limits)}),
+                    return_tensors="pt").input_ids[0] for p in prompts]
+        width = max(map(len,rows))
+        pad,eos = self.tokenizer.pad_token_id,self.tokenizer.eos_token_id
+        ids = torch.full((len(rows),width),pad,dtype=torch.long)
+        mask = torch.zeros_like(ids)
+        for i,row in enumerate(rows):
+            ids[i,-len(row):] = row
+            mask[i,-len(row):] = 1
+        if self.grammar is None:
+            self.grammar=FinitePlanGrammar(self.tokenizer,width,self.limits)
+        sampler = SeededBatchGrammar(self.grammar,width,seeds,self.device)
+        generated=self.model.generate(ids.to(self.device),attention_mask=mask.to(self.device),
+            max_new_tokens=max_new_tokens,do_sample=False,num_beams=1,logits_processor=[sampler],
+            pad_token_id=pad,eos_token_id=eos)
+        result=[]
+        for row in generated[:,width:].tolist():
+            ended=eos in row
+            if ended:row=row[:row.index(eos)+1]
+            plan=FinitePlan.parse(self.tokenizer.decode(row,skip_special_tokens=True),
+                finish_reason='eos' if ended else 'length',limits=self.limits)
+            result.append((plan,row))
+        return result
 
     @torch.no_grad()
     def sample_crossed(self, original, anchor, target, seed, *, max_new_tokens=1536):
